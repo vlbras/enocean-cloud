@@ -1,0 +1,20 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": {
+    "outDir": "../../dist/apps/worker",
+    "rootDir": "src",
+    "composite": true,
+    "tsBuildInfoFile": "../../dist/apps/worker/.tsbuildinfo"
+  },
+  "include": [
+    "src/**/*"
+  ],
+  "references": [
+    {
+      "path": "../../libs/common"
+    },
+    {
+      "path": "../../libs/testing"
+    }
+  ]
+}
