@@ -1,4 +1,4 @@
-import { AppConfig, Logger, SensorEvent } from '@enocean/common';
+import { APP_CONFIG, AppConfig, Logger, SensorEvent } from '@enocean/common';
 import { Inject, Injectable } from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 
@@ -16,7 +16,7 @@ export class KafkaConsumerService {
   private readonly consumer: Consumer;
 
   constructor(
-    @Inject('APP_CONFIG') private readonly config: AppConfig,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly bufferService: BufferService,
   ) {
     this.kafka = new Kafka({

@@ -1,4 +1,5 @@
 import { loadConfig, Logger } from '@enocean/common';
+import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 
 import { ApiModule } from './api.module';
@@ -8,6 +9,14 @@ const logger = new Logger('api-main');
 async function bootstrap() {
   const config = loadConfig();
   const app = await NestFactory.create(ApiModule);
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
 
   await app.listen(config.port);
   logger.info(`API listening on port ${config.port}`);
