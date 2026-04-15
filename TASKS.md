@@ -28,11 +28,11 @@ There is a bug in the event ingestion pipeline that causes data consistency issu
 
 ### Acceptance Criteria
 
-- [ ] All integration tests pass: `yarn test:integration`
-- [ ] No events are lost under ingestion
-- [ ] No duplicate events in `devices.history`
-- [ ] `devices.latest` always reflects the newest sensor value per device
-- [ ] `FLUSH_DEBUG_DELAY_MS` should still work for testing purposes
+- [x] All integration tests pass: `yarn test:integration`
+- [x] No events are lost under ingestion
+- [x] No duplicate events in `devices.history`
+- [x] `devices.latest` always reflects the newest sensor value per device
+- [x] `FLUSH_DEBUG_DELAY_MS` should still work for testing purposes
 
 ### Constraints
 
@@ -62,10 +62,10 @@ Add a REST endpoint to query the event history for a specific device.
 
 ### Acceptance Criteria
 
-- [ ] Endpoint works correctly with all query parameters
-- [ ] Pagination is implemented correctly (offset-based is fine)
-- [ ] Input validation exists for limit, page, timestamps
-- [ ] Unit or integration test covers the happy path
+- [x] Endpoint works correctly with all query parameters
+- [x] Pagination is implemented correctly (offset-based is fine)
+- [x] Input validation exists for limit, page, timestamps
+- [x] Unit or integration test covers the happy path
 
 ---
 
@@ -87,9 +87,9 @@ Add an endpoint that returns aggregated sensor data for a device.
 
 ### Acceptance Criteria
 
-- [ ] Aggregation returns correct results
-- [ ] Handles edge cases (no data, non-numeric values)
-- [ ] At least one integration test
+- [x] Aggregation returns correct results
+- [x] Handles edge cases (no data, non-numeric values)
+- [x] At least one integration test
 
 ---
 

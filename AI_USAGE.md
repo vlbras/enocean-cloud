@@ -14,71 +14,37 @@ If you did not use AI tools, state that explicitly.
 
 ## Tools Used
 
-List all AI tools used:
-
-- Tool name:
-- Version / model (if known):
-- How frequently used: (rare / occasional / heavy)
-
-Example:
-
-- ChatGPT (GPT-5.x), occasional
-- GitHub Copilot, heavy
+- Tool name: ChatGPT
+- Version / model (if known): GPT-5.4
+- How frequently used: occasional
 
 ---
 
 ## What AI Was Used For
 
-Describe what the AI helped with:
-
-- Code generation
-- Refactoring
-- Debugging ideas
-- Test scaffolding
-- Documentation
-- Architecture reasoning
-- Other
-
-Be specific.
-
-Example:
-
-- Generated initial mutex pattern for buffer locking
-- Suggested Mongo atomic update strategy
-- Drafted integration test structure
+- Assistance with writing integration tests:
+  - `apps/api/src/__tests__/devices-history.integration.test.ts`
+  - `apps/api/src/__tests__/device-sensor-aggregate.integration.test.ts`
+- Assistance with designing the MongoDB aggregation pipeline for the sensor aggregation endpoint
+- Minor review / cleanup suggestions during final polish
 
 ---
 
 ## Verification Process
 
-Explain how you verified AI-generated output:
-
-- Tests written or updated
-- Manual reasoning
-- Logs / debugging
-- Code review
-- Stress testing
-- Reruns for determinism
-
-Example:
-
-- Wrote failing test before fix
-- Verified deterministic behavior over 20 runs
-- Reviewed concurrency logic manually
-- Confirmed no event loss in history
+- Ran the integration test suite after implementing the changes
+- Independently reviewed and adjusted generated tests before using them
+- Manually verified the aggregation pipeline logic and expected bucket calculations
+- Confirmed correct handling of:
+  - numeric-only aggregation
+  - empty results
+  - invalid query parameters
+- Re-ran tests after final refactors and cleanup
 
 ---
 
 ## Corrections Made to AI Output
 
-If AI produced incorrect or unsafe suggestions:
-
-- What was wrong?
-- How did you fix it?
-
-Example:
-
-- AI suggested global lock — rejected because it removed concurrency
-- Replaced with per-device async lock
-
-If none:
+- Refined generated test cases to better match project structure and naming
+- Adjusted aggregation pipeline details after manual review and validation
+- Modified suggested code where necessary to align with repository conventions
