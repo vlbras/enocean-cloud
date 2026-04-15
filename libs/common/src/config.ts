@@ -40,3 +40,5 @@ export function loadConfig(): AppConfig {
     port: parseInt(process.env.PORT || '3000', 10),
   };
 }
+
+export const APP_CONFIG = 'APP_CONFIG';

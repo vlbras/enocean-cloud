@@ -1,4 +1,11 @@
-import { AppConfig, DeviceHistoryDoc, DeviceLatestDoc, Logger, SensorEvent } from '@enocean/common';
+import {
+  APP_CONFIG,
+  AppConfig,
+  DeviceHistoryDoc,
+  DeviceLatestDoc,
+  Logger,
+  SensorEvent,
+} from '@enocean/common';
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import { Collection, Db, MongoClient } from 'mongodb';
 
@@ -15,7 +22,7 @@ export class MongoWriterService implements OnModuleInit, OnModuleDestroy {
   private historyCol!: Collection<DeviceHistoryDoc>;
   private latestCol!: Collection<DeviceLatestDoc>;
 
-  constructor(@Inject('APP_CONFIG') private readonly config: AppConfig) {}
+  constructor(@Inject(APP_CONFIG) private readonly config: AppConfig) {}
 
   async onModuleInit() {
     this.client = new MongoClient(this.config.mongo.uri);
@@ -64,12 +71,39 @@ export class MongoWriterService implements OnModuleInit, OnModuleDestroy {
       }
     }
 
-    const updateFields: Record<string, any> = { updatedAt: now };
-    for (const [sensor, data] of Object.entries(sensorUpdates)) {
-      updateFields[`sensors.${sensor}`] = data;
-    }
+    await this.latestCol.updateOne(
+      { _id: deviceId },
+      {
+        $setOnInsert: {
+          _id: deviceId,
+          sensors: {},
+          updatedAt: now,
+        },
+      },
+      { upsert: true },
+    );
 
-    await this.latestCol.updateOne({ _id: deviceId }, { $set: updateFields }, { upsert: true });
+    const latestOps = Object.entries(sensorUpdates).map(([sensor, data]) => ({
+      updateOne: {
+        filter: {
+          _id: deviceId,
+          $or: [
+            { [`sensors.${sensor}`]: { $exists: false } },
+            { [`sensors.${sensor}.ts`]: { $lt: data.ts } },
+          ],
+        },
+        update: {
+          $set: {
+            updatedAt: now,
+            [`sensors.${sensor}`]: data,
+          },
+        },
+      },
+    }));
+
+    if (latestOps.length) {
+      await this.latestCol.bulkWrite(latestOps, { ordered: true });
+    }
 
     logger.debug(`Flushed ${events.length} events for ${deviceId}`);
   }

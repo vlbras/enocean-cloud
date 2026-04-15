@@ -1,4 +1,4 @@
-import { loadConfig } from '@enocean/common';
+import { APP_CONFIG, loadConfig } from '@enocean/common';
 import { Module, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 
 import { BufferService } from './buffer.service';
@@ -10,7 +10,7 @@ const config = loadConfig();
 @Module({
   providers: [
     {
-      provide: 'APP_CONFIG',
+      provide: APP_CONFIG,
       useValue: config,
     },
     BufferService,

@@ -35,4 +35,5 @@ export interface DeviceHistoryDoc {
 export interface BufferEntry {
   items: SensorEvent[];
   timer: ReturnType<typeof setTimeout> | null;
+  flushing: boolean;
 }

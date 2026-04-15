@@ -1,4 +1,4 @@
-import { AppConfig, BufferEntry, Logger, SensorEvent } from '@enocean/common';
+import { APP_CONFIG, AppConfig, BufferEntry, Logger, SensorEvent } from '@enocean/common';
 import { Inject, Injectable } from '@nestjs/common';
 
 import { MongoWriterService } from './mongo-writer.service';
@@ -27,7 +27,7 @@ export class BufferService {
   private readonly debugDelayMs: number;
 
   constructor(
-    @Inject('APP_CONFIG') private readonly config: AppConfig,
+    @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly mongoWriter: MongoWriterService,
   ) {
     this.intervalMs = config.flush.intervalMs;
@@ -42,7 +42,7 @@ export class BufferService {
   addEvent(event: SensorEvent): void {
     let buffer = this.buffers.get(event.deviceId);
     if (!buffer) {
-      buffer = { items: [], timer: null };
+      buffer = { items: [], timer: null, flushing: false };
       this.buffers.set(event.deviceId, buffer);
     }
 
@@ -51,13 +51,16 @@ export class BufferService {
     // Start timer if not already running
     if (!buffer.timer) {
       buffer.timer = setTimeout(() => {
-        buffer!.timer = null;
-        this.flush(event.deviceId);
+        const current = this.buffers.get(event.deviceId);
+        if (!current) return;
+
+        current.timer = null;
+        void this.flush(event.deviceId);
       }, this.intervalMs);
     }
 
     if (buffer.items.length >= this.maxBufferSize) {
-      this.flush(event.deviceId);
+      void this.flush(event.deviceId);
     }
   }
 
@@ -69,28 +72,45 @@ export class BufferService {
    */
   async flush(deviceId: string): Promise<void> {
     const buffer = this.buffers.get(deviceId);
-    const items = buffer?.items;
-    if (!items?.length) return;
+    if (!buffer?.items.length || buffer.flushing) return;
 
-    const toFlush = items;
-
-    logger.debug(`Flushing ${toFlush.length} events for ${deviceId}`);
-
-    if (this.debugDelayMs > 0) {
-      await sleep(this.debugDelayMs);
-    }
-
-    try {
-      await this.mongoWriter.writeEvents(deviceId, toFlush);
-    } catch (err) {
-      logger.error(`Flush failed for ${deviceId}: ${(err as Error).message}`);
-      return;
-    }
-    items.length = 0;
-
-    if (buffer?.timer) {
+    if (buffer.timer) {
       clearTimeout(buffer.timer);
       buffer.timer = null;
+    }
+
+    buffer.flushing = true;
+
+    try {
+      while (buffer.items.length) {
+        const toFlush = buffer.items.splice(0, buffer.items.length);
+
+        logger.debug(`Flushing ${toFlush.length} events for ${deviceId}`);
+
+        if (this.debugDelayMs > 0) {
+          await sleep(this.debugDelayMs);
+        }
+
+        try {
+          await this.mongoWriter.writeEvents(deviceId, toFlush);
+        } catch (err) {
+          buffer.items.unshift(...toFlush);
+          logger.error(`Flush failed for ${deviceId}: ${(err as Error).message}`);
+          return;
+        }
+      }
+    } finally {
+      buffer.flushing = false;
+
+      if (buffer.items.length && !buffer.timer) {
+        buffer.timer = setTimeout(() => {
+          const current = this.buffers.get(deviceId);
+          if (!current) return;
+
+          buffer!.timer = null;
+          void this.flush(deviceId);
+        }, this.intervalMs);
+      }
     }
   }
 
