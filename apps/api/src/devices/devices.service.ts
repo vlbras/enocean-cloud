@@ -1,8 +1,12 @@
-import { APP_CONFIG, AppConfig, DeviceHistoryDoc } from '@enocean/common';
+import { AggregationInterval, APP_CONFIG, AppConfig, DeviceHistoryDoc } from '@enocean/common';
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
-import { Collection, Filter, MongoClient } from 'mongodb';
+import { Collection, Document, Filter, MongoClient } from 'mongodb';
 
 import { GetDeviceHistoryQuery, GetDeviceHistoryResponse } from './dto/get-device-history.dto';
+import {
+  GetDeviceSensorAggregateItem,
+  GetDeviceSensorAggregateQuery,
+} from './dto/get-device-sensor-aggregate.dto';
 
 @Injectable()
 export class DevicesService implements OnModuleInit, OnModuleDestroy {
@@ -60,5 +64,91 @@ export class DevicesService implements OnModuleInit, OnModuleDestroy {
       page: query.page,
       limit: query.limit,
     };
+  }
+
+  async getDeviceSensorAggregate(
+    deviceId: string,
+    sensor: string,
+    query: GetDeviceSensorAggregateQuery,
+  ): Promise<GetDeviceSensorAggregateItem[]> {
+    const bucketSizeMs = this.getBucketSizeMs(query.interval);
+
+    const pipeline: Document[] = [
+      {
+        $match: {
+          deviceId,
+          sensor,
+          ts: {
+            $gte: query.from,
+            $lte: query.to,
+          },
+          value: {
+            $type: 'number',
+          },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          ts: 1,
+          value: 1,
+          bucketTs: {
+            $subtract: ['$ts', { $mod: ['$ts', bucketSizeMs] }],
+          },
+        },
+      },
+      {
+        $group: {
+          _id: '$bucketTs',
+          min: { $min: '$value' },
+          max: { $max: '$value' },
+          avg: { $avg: '$value' },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $project: {
+          _id: 0,
+          ts: '$_id',
+          min: 1,
+          max: 1,
+          avg: 1,
+          count: 1,
+        },
+      },
+      {
+        $sort: {
+          ts: 1,
+        },
+      },
+    ];
+
+    const result = await this.historyCol
+      .aggregate<GetDeviceSensorAggregateItem>(pipeline)
+      .toArray();
+
+    return result.map((item) => ({
+      ts: item.ts,
+      min: item.min,
+      max: item.max,
+      avg: item.avg,
+      count: item.count,
+    }));
+  }
+
+  private getBucketSizeMs(interval: AggregationInterval): number {
+    switch (interval) {
+      case AggregationInterval.ONE_MINUTE:
+        return 60 * 1000;
+
+      case AggregationInterval.FIVE_MINUTES:
+        return 5 * 60 * 1000;
+
+      case AggregationInterval.ONE_HOUR:
+        return 60 * 60 * 1000;
+
+      case AggregationInterval.ONE_DAY:
+        return 24 * 60 * 60 * 1000;
+    }
   }
 }

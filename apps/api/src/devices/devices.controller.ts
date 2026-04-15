@@ -2,6 +2,10 @@ import { BadRequestException, Controller, Get, Param, Query } from '@nestjs/comm
 
 import { DevicesService } from './devices.service';
 import { GetDeviceHistoryQuery, GetDeviceHistoryResponse } from './dto/get-device-history.dto';
+import {
+  GetDeviceSensorAggregateItem,
+  GetDeviceSensorAggregateQuery,
+} from './dto/get-device-sensor-aggregate.dto';
 
 @Controller('devices')
 export class DevicesController {
@@ -17,5 +21,18 @@ export class DevicesController {
     }
 
     return this.devicesService.getDeviceHistory(deviceId, query);
+  }
+
+  @Get(':deviceId/sensors/:sensor/aggregate')
+  async getDeviceSensorAggregate(
+    @Param('deviceId') deviceId: string,
+    @Param('sensor') sensor: string,
+    @Query() query: GetDeviceSensorAggregateQuery,
+  ): Promise<GetDeviceSensorAggregateItem[]> {
+    if (query.from > query.to) {
+      throw new BadRequestException('from must be less than or equal to to');
+    }
+
+    return this.devicesService.getDeviceSensorAggregate(deviceId, sensor, query);
   }
 }
