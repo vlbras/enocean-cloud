@@ -22,7 +22,7 @@ export class DevicesService implements OnModuleInit, OnModuleDestroy {
     const db = this.client.db(this.config.mongo.dbName);
     this.historyCol = db.collection<DeviceHistoryDoc>('devices.history');
 
-    await this.historyCol.createIndex({ deviceId: 1, sensor: 1, ts: 1 });
+    await this.historyCol.createIndex({ deviceId: 1, sensor: 1, ts: 1 }, { unique: true });
   }
 
   async onModuleDestroy(): Promise<void> {

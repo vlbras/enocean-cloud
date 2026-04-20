@@ -1,8 +1,9 @@
-import { APP_CONFIG, AppConfig, Logger, SensorEvent } from '@enocean/common';
+import { APP_CONFIG, AppConfig, Logger, SensorEvent, SensorEventSchema } from '@enocean/common';
 import { Inject, Injectable } from '@nestjs/common';
 import { Consumer, Kafka } from 'kafkajs';
 
 import { BufferService } from './buffer.service';
+import { KafkaDlqProducerService } from './kafka-dlq-producer.service';
 
 const logger = new Logger('kafka-consumer');
 
@@ -18,6 +19,7 @@ export class KafkaConsumerService {
   constructor(
     @Inject(APP_CONFIG) private readonly config: AppConfig,
     private readonly bufferService: BufferService,
+    private readonly dlqProducer: KafkaDlqProducerService,
   ) {
     this.kafka = new Kafka({
       clientId: 'enocean-worker',
@@ -39,16 +41,37 @@ export class KafkaConsumerService {
       // Multiple partitions consumed concurrently — this increases
       // the chance of concurrent flushes happening
       partitionsConsumedConcurrently: 3,
-      eachMessage: async ({ message }) => {
-        try {
-          const value = message.value?.toString();
-          if (!value) return;
+      eachMessage: async ({ topic, partition, message }) => {
+        const rawValue = message.value?.toString() ?? null;
 
-          const event: SensorEvent = JSON.parse(value);
+        try {
+          if (!rawValue) {
+            throw new Error('Kafka message value is empty');
+          }
+
+          const parsed: unknown = JSON.parse(rawValue);
+          const event: SensorEvent = SensorEventSchema.parse(parsed);
+
           this.bufferService.addEvent(event);
         } catch (err) {
-          // TODO: DLQ for malformed events
-          logger.error('Failed to process message', { error: String(err) });
+          const reason = err instanceof Error ? err.message : String(err);
+
+          logger.error('Failed to process message', { error: reason });
+
+          try {
+            await this.dlqProducer.publishMalformedEvent({
+              rawValue,
+              reason,
+              topic,
+              partition,
+              offset: message.offset,
+              timestamp: message.timestamp,
+            });
+          } catch (dlqErr) {
+            logger.error('Failed to publish message to DLQ', {
+              error: dlqErr instanceof Error ? dlqErr.message : String(dlqErr),
+            });
+          }
         }
       },
     });

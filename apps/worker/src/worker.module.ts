@@ -3,6 +3,7 @@ import { Module, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 
 import { BufferService } from './buffer.service';
 import { KafkaConsumerService } from './kafka-consumer.service';
+import { KafkaDlqProducerService } from './kafka-dlq-producer.service';
 import { MongoWriterService } from './mongo-writer.service';
 
 const config = loadConfig();
@@ -16,6 +17,7 @@ const config = loadConfig();
     BufferService,
     MongoWriterService,
     KafkaConsumerService,
+    KafkaDlqProducerService,
   ],
 })
 export class WorkerModule implements OnModuleInit, OnModuleDestroy {

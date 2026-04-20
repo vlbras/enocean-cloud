@@ -1,13 +1,17 @@
+import { z } from 'zod';
+
 /**
  * Kafka input event shape — comes from device gateways
- * TODO: add validation schema (zod?)
  */
-export interface SensorEvent {
-  deviceId: string;
-  ts: number;
-  sensor: string;
-  value: number | string | boolean | null;
-}
+
+export const SensorEventSchema = z.object({
+  deviceId: z.string(),
+  ts: z.number().nonnegative(),
+  sensor: z.string(),
+  value: z.union([z.number(), z.string(), z.boolean(), z.null()]),
+});
+
+export type SensorEvent = z.infer<typeof SensorEventSchema>;
 
 /**
  * Shape of a document in devices.latest collection

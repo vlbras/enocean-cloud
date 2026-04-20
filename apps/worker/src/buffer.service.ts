@@ -107,7 +107,7 @@ export class BufferService {
           const current = this.buffers.get(deviceId);
           if (!current) return;
 
-          buffer!.timer = null;
+          current.timer = null;
           void this.flush(deviceId);
         }, this.intervalMs);
       }

@@ -102,7 +102,7 @@ export class MongoWriterService implements OnModuleInit, OnModuleDestroy {
     }));
 
     if (latestOps.length) {
-      await this.latestCol.bulkWrite(latestOps, { ordered: true });
+      await this.latestCol.bulkWrite(latestOps, { ordered: false });
     }
 
     logger.debug(`Flushed ${events.length} events for ${deviceId}`);
